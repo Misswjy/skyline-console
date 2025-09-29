@@ -1,6 +1,6 @@
 host: 127.0.0.1
 port: 8088
-server: http://110.42.96.40:9999
+server: http://127.0.0.1
 
 theme: default
 
