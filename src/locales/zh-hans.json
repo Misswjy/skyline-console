@@ -3239,5 +3239,12 @@
   "{name} {id} could not be found.": "您查看的资源{name} {id} 无法获取",
   "{number} {resource}": "{number}个{resource}",
   "{pageSize} items/page": "{pageSize} 条/页",
-  "{seconds} seconds": "{seconds}秒"
+  "{seconds} seconds": "{seconds}秒",
+  "DISK Read/Write": "磁盘读写",
+  "Monitor": "监控",
+  "Unrescue": "取消",
+  "Verify Resize/Migrate": "验证调整/迁移",
+  "Read IOPS/GB": "读取IOPS/GB",
+  "Write IOPS/GB": "写入IOPS/GB",
+  "Loading monitoring data...": "正在加载监控数据..."
 }

@@ -31,6 +31,8 @@ import ActionLog from './ActionLog';
 import Snapshots from '../../InstanceSnapshot';
 import actionConfigs from '../actions';
 import Log from './Log';
+import MonitorBase from 'src/stores/prometheus/monitor-base';
+import { InstanceMonitorWrapper } from './Monitor';
 
 export class InstanceDetail extends Base {
   get name() {
@@ -154,6 +156,12 @@ export class InstanceDetail extends Base {
         key: 'logs',
         component: Log,
       },
+      {
+        title: t('Monitor'),
+        key: 'monitor',
+        component: InstanceMonitorWrapper,
+      },
+      
     ];
     if (this.enableCinder) {
       tabs.splice(1, 0, {

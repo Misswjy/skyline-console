@@ -178,7 +178,8 @@ export default class FormItem extends React.Component {
         };
       }
       default: {
-        const { validator, ...rest } = this.props;
+        // Filter out non-DOM props to avoid React unknown prop warnings
+        const { validator, otherRule, tip, isWrappedValue, hasRequiredCheck, ...rest } = this.props;
         return { ...rest };
       }
     }

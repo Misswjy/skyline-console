@@ -31,18 +31,22 @@ const ChartCard = (props) => {
   const renderContent = (contextValue) => {
     const {
       height,
-      scale,
+      scale = {},
       chartType,
       toolTipProps = baseToolTipProps,
     } = chartProps;
 
     const { data } = contextValue;
 
-    scale.x = merge(
-      {},
-      scale.x || {},
-      getXScale(props.fetchDataParams.currentRange)
-    );
+    // keep render pure: do not mutate incoming scale
+    const nextScale = {
+      ...scale,
+      x: merge(
+        {},
+        scale.x || {},
+        getXScale(props.fetchDataParams.currentRange)
+      ),
+    };
 
     let lineProps;
     switch (chartType) {
@@ -59,7 +63,7 @@ const ChartCard = (props) => {
     }
 
     return (
-      <Chart autoFit padding="auto" data={data} height={height} scale={scale}>
+      <Chart autoFit padding="auto" data={data} height={height} scale={nextScale}>
         <Line {...lineProps} />
         <Tooltip {...toolTipProps} />
       </Chart>
@@ -77,12 +81,14 @@ const ChartCard = (props) => {
     } = props;
     const defaultNode = {};
     const { params: fParams = {} } = fetchDataParams;
-    const { instance, hostname, ...rest } = fParams;
+    const { domain, instance, hostname, ...rest } = fParams;
     if (fParams) {
-      if (instance) {
-        defaultNode.instance = instance;
+      if (domain) {
+        defaultNode.domain = domain;
       } else if (hostname) {
         defaultNode.hostname = hostname;
+      } else if (instance) {
+        defaultNode.instance = instance;
       }
     }
 

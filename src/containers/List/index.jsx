@@ -514,8 +514,9 @@ export default class BaseList extends React.Component {
       sortOrder,
       timerFilter,
     } = this.list;
+    const items = this.getDataSource();
     const pagination = {
-      total,
+      total: this.isFilterByBackend ? total : items.length,
       current: Number(page),
       pageSize: this.getTablePageSize(limit),
       // eslint-disable-next-line no-shadow
@@ -529,7 +530,7 @@ export default class BaseList extends React.Component {
     return {
       resourceName: this.name,
       detailName: this.detailName,
-      data: this.getDataSource(),
+      data: items,
       // data:data,
       columns: this.getColumns(),
       filters: this.getFilters(),
@@ -923,18 +924,7 @@ export default class BaseList extends React.Component {
       items = (toJS(data) || []).filter((it) =>
         this.filterData(it, toJS(newFilters), toJS(timeFilter))
       );
-      this.updateList({ total: items.length });
     }
-    const hasTransData = items.some((item) =>
-      this.itemInTransitionFunction(item)
-    );
-    if (hasTransData) {
-      this.setRefreshDataTimerTransition();
-    } else {
-      this.setRefreshDataTimerAuto();
-    }
-    this.updateHintsByData(items);
-    this.setTableHeight();
     return items;
   };
 

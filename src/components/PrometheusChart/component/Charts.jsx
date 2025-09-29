@@ -52,17 +52,30 @@ const Charts = (props) => {
           }
 
           const { params = {} } = fetchDataParams;
+          // clone params to keep render pure and avoid mutating props
+          const clonedParams = { ...params };
 
           const newFetchDataParams = {
             currentRange: ctx.range,
             interval: ctx.interval,
-            params,
+            params: clonedParams,
           };
-          if (ctx.node?.metric.hostname) {
-            newFetchDataParams.params.hostname = ctx.node?.metric.hostname;
-          } else if (ctx.node?.metric.instance) {
-            newFetchDataParams.params.instance = ctx.node?.metric.instance;
+          // 优先使用 domain，其次 hostname，再次 instance；并合并其它可用的 metric 标签（如 device）
+          if (ctx.node?.metric?.domain) {
+            newFetchDataParams.params.domain = ctx.node.metric.domain;
+          } else if (ctx.node?.metric?.hostname) {
+            newFetchDataParams.params.hostname = ctx.node.metric.hostname;
+          } else if (ctx.node?.metric?.instance) {
+            newFetchDataParams.params.instance = ctx.node.metric.instance;
           }
+          // 合并其它可能存在的标签（例如 device），不覆盖已有参数
+          Object.keys(ctx.node?.metric || {}).forEach((k) => {
+            if (!['domain', 'hostname', 'instance'].includes(k)) {
+              if (newFetchDataParams.params[k] === undefined) {
+                newFetchDataParams.params[k] = ctx.node.metric[k];
+              }
+            }
+          });
           return (
             <Col {...colProps}>
               <BaseCard
@@ -93,17 +106,29 @@ const Charts = (props) => {
           }
 
           const { params = {} } = fetchDataParams;
+          // clone params to keep render pure and avoid mutating props
+          const clonedParams = { ...params };
 
           const newFetchDataParams = {
             currentRange: ctx.range,
             interval: ctx.interval,
-            params,
+            params: clonedParams,
           };
-          if (ctx.node?.metric.hostname) {
-            newFetchDataParams.params.hostname = ctx.node?.metric.hostname;
-          } else if (ctx.node?.metric.instance) {
-            newFetchDataParams.params.instance = ctx.node?.metric.instance;
+          // 优先使用 domain，其次 hostname，再次 instance；并合并其它可用的 metric 标签（如 device）
+          if (ctx.node?.metric?.domain) {
+            newFetchDataParams.params.domain = ctx.node.metric.domain;
+          } else if (ctx.node?.metric?.hostname) {
+            newFetchDataParams.params.hostname = ctx.node.metric.hostname;
+          } else if (ctx.node?.metric?.instance) {
+            newFetchDataParams.params.instance = ctx.node.metric.instance;
           }
+          Object.keys(ctx.node?.metric || {}).forEach((k) => {
+            if (!['domain', 'hostname', 'instance'].includes(k)) {
+              if (newFetchDataParams.params[k] === undefined) {
+                newFetchDataParams.params[k] = ctx.node.metric[k];
+              }
+            }
+          });
           return (
             <Col {...colProps}>
               <ChartCard

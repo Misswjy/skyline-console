@@ -206,7 +206,11 @@ export default class index extends Component {
       return (
         <Select
           className={styles.float}
-          options={this.getOptions(index)}
+          options={(this.getOptions(index) || []).map((it) => ({
+            label: it.label,
+            value: it.value,
+            disabled: it.disabled,
+          }))}
           value={item.value}
           placeholder={placeholder}
           style={{ width }}

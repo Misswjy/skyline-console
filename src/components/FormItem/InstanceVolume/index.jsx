@@ -144,7 +144,11 @@ export default class InstanceVolume extends React.Component {
     const selects = (
       <Select
         value={type}
-        options={options}
+        options={(options || []).map((it) => ({
+          label: it.label,
+          value: it.value,
+          disabled: it.disabled,
+        }))}
         onChange={this.onSelectChange}
         className={styles.select}
         placeholder={t('Please select type')}

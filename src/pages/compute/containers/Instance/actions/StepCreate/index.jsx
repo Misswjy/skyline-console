@@ -50,9 +50,13 @@ export class StepCreate extends StepAction {
     this.store = globalServerStore;
     this.projectStore = globalProjectStore;
     this.state.quotaLoading = true;
-    this.getQuota();
     this.status = 'success';
     this.errorMsg = '';
+  }
+
+  componentDidMount() {
+    // Fetch quota after component mounts to avoid setState before mount warning
+    this.getQuota();
   }
 
   static policy = [

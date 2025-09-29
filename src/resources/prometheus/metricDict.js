@@ -489,27 +489,87 @@ const metricDict = {
     },
   },
   instanceMonitor: {
+    openstackinfo: {
+      url: ['libvirt_domain_openstack_info'],
+    },
     cpu: {
-      url: ['virtual:kvm:cpu:usage'],
+      url: ['libvirt_domain_info_cpu_time_seconds_total'],
+      finalFormatFunc: [
+        (url) => {
+          const tagMatch = url.match(/\{([^}]*)\}/);
+          const tags = tagMatch ? tagMatch[1] : '';
+          return `rate(libvirt_domain_info_cpu_time_seconds_total{${tags}}[3m])/libvirt_domain_info_virtual_cpus{${tags}}`;
+        },
+      ],
+    },
+    memUsage: {
+      url: ['libvirt_domain_memory_stats_used_percent'],
     },
     memory: {
-      url: ['virtual:kvm:memory:used'],
+      url: [
+        'libvirt_domain_memory_stats_maximum_bytes-libvirt_domain_memory_stats_usable_bytes',
+        'libvirt_domain_memory_stats_usable_bytes',
+      ],
+      finalFormatFunc: [
+        (url) => {
+          const tagMatch = url.match(/\{([^}]*)\}/);
+          const tags = tagMatch ? tagMatch[1] : '';
+          return `libvirt_domain_memory_stats_maximum_bytes{${tags}}-libvirt_domain_memory_stats_usable_bytes{${tags}}`;
+        },
+        (url) => {
+          const tagMatch = url.match(/\{([^}]*)\}/);
+          const tags = tagMatch ? tagMatch[1] : '';
+          return `libvirt_domain_memory_stats_usable_bytes{${tags}}`;
+        },
+      ],
     },
     network: {
       url: [
-        'virtual:kvm:network:receive:rate',
-        'virtual:kvm:network:transmit:rate',
+        'libvirt_domain_interface_stats_receive_bytes_total',
+        'libvirt_domain_interface_stats_transmit_bytes_total',
+      ],
+      finalFormatFunc: [
+        (url) => {
+          const tagMatch = url.match(/\{([^}]*)\}/);
+          const tags = tagMatch ? tagMatch[1] : '';
+          return `rate(libvirt_domain_interface_stats_receive_bytes_total{${tags}}[3m])`;
+        },
+        (url) => {
+          const tagMatch = url.match(/\{([^}]*)\}/);
+          const tags = tagMatch ? tagMatch[1] : '';
+          return `rate(libvirt_domain_interface_stats_transmit_bytes_total{${tags}}[3m])`;
+        },
       ],
     },
     disk: {
-      url: ['virtual:kvm:disk:read:kbps', 'virtual:kvm:disk:write:kbps'],
+      url: [
+        'libvirt_domain_block_stats_read_bytes_total',
+        'libvirt_domain_block_stats_write_bytes_total',
+      ],
+      finalFormatFunc: [
+        (url) => {
+          const tagMatch = url.match(/\{([^}]*)\}/);
+          const tags = tagMatch ? tagMatch[1] : '';
+          return `rate(libvirt_domain_block_stats_read_bytes_total{${tags}}[3m])`;
+        },
+        (url) => {
+          const tagMatch = url.match(/\{([^}]*)\}/);
+          const tags = tagMatch ? tagMatch[1] : '';
+          return `rate(libvirt_domain_block_stats_write_bytes_total{${tags}}[3m])`;
+        },
+      ],
     },
     disk_iops: {
-      url: ['virtual:kvm:disk:read:iops', 'virtual:kvm:disk:write:iops'],
-    },
-    disk_usage: {
-      url: ['vm_disk_fs_used_pcent'],
-      finalFormatFunc: [(url) => `avg(${url}) without(hostname)`],
+      url: [
+        'libvirt_domain_block_stats_read_requests_total+libvirt_domain_block_stats_write_requests_total',
+      ],
+      finalFormatFunc: [
+        (url) => {
+          const tagMatch = url.match(/\{([^}]*)\}/);
+          const tags = tagMatch ? tagMatch[1] : '';
+          return `sum(rate(libvirt_domain_block_stats_read_requests_total{${tags}}[3m])) by (domain) + sum(rate(libvirt_domain_block_stats_write_requests_total{${tags}}[3m])) by (domain)`;
+        },
+      ],
     },
   },
 };
