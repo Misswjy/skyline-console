@@ -75,15 +75,23 @@ export class HypervisorStore extends Base {
         item.memory_mb *= memory_ratio;
       }
       item.vcpus_used_percent =
-        (item.vcpus && ((item.vcpus_used / item.vcpus) * 100).toFixed(2)) || 0;
+        item.vcpus
+          ? Number(
+              ((item.vcpus_used / item.vcpus) * 100).toFixed(2)
+            )
+          : 0;
       item.memory_mb_percent =
-        (item.memory_mb &&
-          ((item.memory_mb_used / item.memory_mb) * 100).toFixed(2)) ||
-        0;
+        item.memory_mb
+          ? Number(
+              ((item.memory_mb_used / item.memory_mb) * 100).toFixed(2)
+            )
+          : 0;
       item.storage_percent =
-        (item.local_gb &&
-          ((item.local_gb_used / item.local_gb) * 100).toFixed(2)) ||
-        0;
+        item.local_gb
+          ? Number(
+              ((item.local_gb_used / item.local_gb) * 100).toFixed(2)
+            )
+          : 0;
       item.memory_mb_used_gb = getGiBValue(item.memory_mb_used);
       item.memory_mb_gb = getGiBValue(item.memory_mb);
       return item;

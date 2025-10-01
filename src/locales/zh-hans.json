@@ -3246,5 +3246,6 @@
   "Verify Resize/Migrate": "验证调整/迁移",
   "Read IOPS/GB": "读取IOPS/GB",
   "Write IOPS/GB": "写入IOPS/GB",
-  "Loading monitoring data...": "正在加载监控数据..."
+  "Loading monitoring data...": "正在加载监控数据...",
+  "HowStack": "皓量云擎"
 }

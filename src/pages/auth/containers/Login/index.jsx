@@ -63,12 +63,12 @@ export class Login extends Component {
   }
 
   get productName() {
-    const { product_name = { zh: t('Cloud Platform'), en: 'Cloud Platform' } } =
+    const { product_name = { zh: t('皓量云擎'), en: 'HowStack' } } =
       this.info;
     const { getLocaleShortName } = i18n;
     const language = getLocaleShortName();
     const name =
-      product_name[language] || t('Cloud Platform') || 'Cloud Platform';
+      product_name[language] || t('皓量云擎') || 'HowStack';
     return t('Welcome, {name}', { name });
   }
 
@@ -227,12 +227,13 @@ export class Login extends Component {
       name: 'submit',
       render: () => (
         <Row gutter={8}>
-          <Col span={12}>
+          <Col span={24}>
             <Button
               loading={loading}
               type="primary"
               htmlType="submit"
               className="login-form-button"
+              style={{ width: '100%' }}
             >
               {t('Log in')}
             </Button>

@@ -17,9 +17,8 @@ import { inject, observer } from 'mobx-react';
 import renderRoutes from 'utils/RouterConfig';
 import SelectLang from 'components/SelectLang';
 
-import logo from 'asset/image/logo.png';
-import loginFullImage from 'asset/image/login-full.png';
-import loginRightLogo from 'asset/image/loginRightLogo.png';
+import logo from '../../asset/image/logo.png';
+import loginFullImage from 'asset/image/login-full.jpg';
 import styles from './index.less';
 
 export class AuthLayout extends Component {
@@ -29,41 +28,29 @@ export class AuthLayout extends Component {
     this.routes = props.route.routes;
   }
 
-  renderRight() {
-    return (
-      <div className={styles.right}>
-        <img
-          alt=""
-          className={styles['login-full-image']}
-          src={loginFullImage}
-        />
-        <div className={styles['full-image-front']} />
-        <img
-          src={loginRightLogo}
-          alt=""
-          className={styles['login-right-logo']}
-        />
-      </div>
-    );
-  }
-
   render() {
     return (
-      <div className={styles.container}>
-        <div className={styles.left}>
+      <div 
+        className={styles.container}
+        style={{
+          backgroundImage: `url(${loginFullImage})`,
+          backgroundRepeat: 'no-repeat',
+          backgroundPosition: 'center center',
+          backgroundSize: 'cover'
+        }}
+      >
+        <div className={styles['login-form']}>
           <div className={styles.lang}>
             <SelectLang />
           </div>
-          <div className={styles.main}>
-            <div className={styles.top}>
-              <div className={styles.header}>
-                <img alt="logo" className={styles.logo} src={logo} />
-              </div>
+          <div className={styles.top}>
+            <div className={styles.header}>
+              <img alt="logo" className={styles.logo} src={logo} />
             </div>
-            {renderRoutes(this.routes)}
           </div>
+          {renderRoutes(this.routes)}
         </div>
-        {this.renderRight()}
+        <div className={styles['background-overlay']} />
       </div>
     );
   }

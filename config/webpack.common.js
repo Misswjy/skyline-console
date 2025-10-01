@@ -51,14 +51,14 @@ module.exports = {
             loader: 'url-loader',
             options: {
               limit: 10240,
-              name: normalize(`asset/image/[name].${version}.[ext]`),
+              name: `asset/image/[name].${version}.[ext]`,
             },
           },
         ],
         exclude: [
-          root('src/asset/image/logo.png'),
-          root('src/asset/image/loginRightLogo.png'),
-        ],
+              root('src/asset/image/logo.png'),
+              root('src/asset/image/login-full.jpg'),
+            ],
       },
       {
         test: /\.(png|gif|jpg)$/,
@@ -67,14 +67,14 @@ module.exports = {
             loader: 'url-loader',
             options: {
               limit: false,
-              name: normalize('asset/image/[name].[ext]'),
+              name: 'asset/image/[name].[ext]',
             },
           },
         ],
         include: [
-          root('src/asset/image/logo.png'),
-          root('src/asset/image/loginRightLogo.png'),
-        ],
+              root('src/asset/image/logo.png'),
+              root('src/asset/image/login-full.jpg'),
+            ],
       },
       {
         test: /\.svg$/,
@@ -83,13 +83,14 @@ module.exports = {
             loader: 'url-loader',
             options: {
               limit: false,
-              name: normalize('asset/image/[name].[ext]'),
+              name: 'asset/image/[name].[ext]',
             },
           },
         ],
         include: [
           root('src/asset/image/cloud-logo.svg'),
           root('src/asset/image/cloud-logo-white.svg'),
+          root('src/asset/image/login-bg.jpg'),
         ],
       },
       {
