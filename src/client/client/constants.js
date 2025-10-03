@@ -123,6 +123,11 @@ export const apiVersionMaps = {
 };
 
 export const getOpenstackApiVersion = (url) => {
+  // Route-specific override: use Nova microversion 2.79 for hypervisors detail
+  // Keep other Nova requests using the default microversion.
+  if (url.includes('nova') && url.includes('os-hypervisors/detail')) {
+    return { key: 'Openstack-Api-Version', value: 'compute 2.79' };
+  }
   const key = Object.keys(apiVersionMaps).find((it) => url.indexOf(it) > -1);
   if (!key) {
     return null;
