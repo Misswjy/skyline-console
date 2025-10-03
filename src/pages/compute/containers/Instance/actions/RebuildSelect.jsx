@@ -168,6 +168,34 @@ export class Rebuild extends ModalAction {
         selectedLabel: t('Image'),
         onTabChange: this.onImageTabChange,
       },
+      {
+        name: 'adminPass',
+        label: t('Password'),
+        type: 'input-password',
+        required: false,
+        tip: t('Set the instance password during rebuild'),
+      },
+      {
+        name: 'confirmAdminPass',
+        label: t('Confirm Password'),
+        type: 'input-password',
+        required: false,
+        dependencies: ['adminPass'],
+        otherRule: ({ getFieldValue }) => ({
+          validator(rule, value) {
+            const adminPass = getFieldValue('adminPass');
+            if (!adminPass && !value) {
+              return Promise.resolve();
+            }
+            if (adminPass && value !== adminPass) {
+              return Promise.reject(
+                new Error(t('Password must be the same with confirm password.'))
+              );
+            }
+            return Promise.resolve();
+          },
+        }),
+      },
     ];
   }
 
@@ -176,7 +204,11 @@ export class Rebuild extends ModalAction {
     const {
       image: { selectedRowKeys = [] },
     } = values;
-    return this.store.rebuild({ id, image: selectedRowKeys[0] });
+    return this.store.rebuild({
+      id,
+      image: selectedRowKeys[0],
+      adminPass: values.adminPass,
+    });
   };
 }
 

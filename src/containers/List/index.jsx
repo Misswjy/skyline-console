@@ -724,6 +724,14 @@ export default class BaseList extends React.Component {
   fetchListWithTry = async (func) => {
     try {
       func && (await func());
+      // schedule next refresh after successful fetch
+      const { data = [] } = this.list || {};
+      const hasTransitionItem = isArray(data) && data.some(this.itemInTransitionFunction);
+      if (hasTransitionItem) {
+        this.setRefreshDataTimerTransition();
+      } else {
+        this.setRefreshDataTimerAuto();
+      }
     } catch (e) {
       // eslint-disable-next-line no-console
       console.log('fetch list error', e);

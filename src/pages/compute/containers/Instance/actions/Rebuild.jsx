@@ -17,7 +17,7 @@ import { ConfirmAction } from 'containers/Action';
 import {
   isActiveOrShutOff,
   isNotLockedOrAdmin,
-  isIsoInstance,
+  isIsoInstance
 } from 'resources/nova/instance';
 
 export default class Rebuild extends ConfirmAction {

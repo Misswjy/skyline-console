@@ -94,7 +94,7 @@ export const firewallEndpoint = () => getOriginEndpoint('neutron_firewall');
 export const apiVersionMaps = {
   nova: {
     key: 'Openstack-Api-Version',
-    value: 'compute 2.79',
+    value: 'compute 2.100',
   },
   placement: {
     key: 'Openstack-Api-Version',
