@@ -410,11 +410,12 @@ export class ServerStore extends Base {
   }
 
   @action
-  async rebuild({ id, image, adminPass }) {
+  async rebuild({ id, image, adminPass, user_data }) {
     const body = {
       rebuild: {
         imageRef: image,
         ...(adminPass ? { adminPass } : {}),
+        ...(user_data ? { user_data } : {}),
       },
     };
     return this.operation({ body, id });

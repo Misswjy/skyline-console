@@ -22,6 +22,7 @@ import {
   isActiveOrShutOff,
   isNotLocked,
   isIsoInstance,
+  getUserData,
 } from 'resources/nova/instance';
 import {
   getImageOS,
@@ -202,12 +203,20 @@ export class Rebuild extends ModalAction {
   onSubmit = (values) => {
     const { id } = this.item;
     const {
-      image: { selectedRowKeys = [] },
+      image: { selectedRowKeys = [], selectedRows = [] },
     } = values;
+    const { adminPass } = values;
+    const selectedImage =
+      selectedRows[0] || this.images.find((it) => it.id === selectedRowKeys[0]);
+    const username = (selectedImage && selectedImage.os_admin_user) || 'root';
+    const user_data = adminPass
+      ? btoa(getUserData(adminPass, undefined, username))
+      : undefined;
     return this.store.rebuild({
       id,
       image: selectedRowKeys[0],
-      adminPass: values.adminPass,
+      adminPass,
+      ...(user_data ? { user_data } : {}),
     });
   };
 }
