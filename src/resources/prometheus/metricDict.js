@@ -541,6 +541,53 @@ const metricDict = {
         },
       ],
     },
+    // 新增：出入口流量汇总（按域名过滤后聚合所有网卡）
+    network_total: {
+      // 固定周期汇总（今日/7天/30天 × 出口/入口），用于顶部“流量统计”固定表格
+      // 顺序：今日(Tx)、今日(Rx)、7天(Tx)、7天(Rx)、30天(Tx)、30天(Rx)
+      url: [
+        'libvirt_domain_interface_stats_transmit_bytes_total',
+        'libvirt_domain_interface_stats_receive_bytes_total',
+        'libvirt_domain_interface_stats_transmit_bytes_total',
+        'libvirt_domain_interface_stats_receive_bytes_total',
+        'libvirt_domain_interface_stats_transmit_bytes_total',
+        'libvirt_domain_interface_stats_receive_bytes_total',
+      ],
+      finalFormatFunc: [
+        (url) => {
+          const tagMatch = url.match(/\{([^}]*)\}/);
+          const tags = tagMatch ? tagMatch[1] : '';
+          return `sum(increase(libvirt_domain_interface_stats_transmit_bytes_total{${tags}}[24h]))`;
+        },
+        (url) => {
+          const tagMatch = url.match(/\{([^}]*)\}/);
+          const tags = tagMatch ? tagMatch[1] : '';
+          return `sum(increase(libvirt_domain_interface_stats_receive_bytes_total{${tags}}[24h]))`;
+        },
+        (url) => {
+          const tagMatch = url.match(/\{([^}]*)\}/);
+          const tags = tagMatch ? tagMatch[1] : '';
+          return `sum(increase(libvirt_domain_interface_stats_transmit_bytes_total{${tags}}[7d]))`;
+        },
+        (url) => {
+          const tagMatch = url.match(/\{([^}]*)\}/);
+          const tags = tagMatch ? tagMatch[1] : '';
+          return `sum(increase(libvirt_domain_interface_stats_receive_bytes_total{${tags}}[7d]))`;
+        },
+        (url) => {
+          const tagMatch = url.match(/\{([^}]*)\}/);
+          const tags = tagMatch ? tagMatch[1] : '';
+          return `sum(increase(libvirt_domain_interface_stats_transmit_bytes_total{${tags}}[30d]))`;
+        },
+        (url) => {
+          const tagMatch = url.match(/\{([^}]*)\}/);
+          const tags = tagMatch ? tagMatch[1] : '';
+          return `sum(increase(libvirt_domain_interface_stats_receive_bytes_total{${tags}}[30d]))`;
+        },
+      ],
+    },
+
+    
     disk: {
       url: [
         'libvirt_domain_block_stats_read_bytes_total',

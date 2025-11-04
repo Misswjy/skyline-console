@@ -16,6 +16,7 @@ import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { get } from 'lodash';
 import { Alert, Select } from 'antd';
+import { Chart, Interval, Tooltip, Axis, Coordinate } from 'bizcharts';
 import { LoadingOutlined } from '@ant-design/icons';
 import BaseContent from 'components/PrometheusChart/component/BaseContent';
 import { getSuitableValue } from 'resources/prometheus/monitoring';
@@ -124,6 +125,70 @@ export const getTopCardList = (instanceId, domain) => [
         {get(value.data, '[0].y', 0).toFixed(2)}
       </div>
     ),
+  },
+  {
+    title: t('流量统计'),
+    span: 12,
+    visibleHeight: 180,
+    createFetchParams: {
+      // 使用 current 查询，固定三个周期（今日/7天/30天）统计
+      requestType: 'current',
+      // 使用在 metricDict 中定义的网络汇总查询
+      metricKey: 'instanceMonitor.network_total',
+      params: {
+        domain,
+      },
+    },
+    handleDataParams: {
+      // 直接取汇总字节数（increase 区间累积），渲染为固定表格
+      formatDataFn: (responses) => {
+        const safeVal = (res) => {
+          const v = get(res, 'data.result[0].value[1]');
+          const n = parseFloat(v);
+          return Number.isNaN(n) ? 0 : n;
+        };
+        // 顺序：今日(Tx)、今日(Rx)、7天(Tx)、7天(Rx)、30天(Tx)、30天(Rx)
+        const todayTx = safeVal(responses?.[0]);
+        const todayRx = safeVal(responses?.[1]);
+        const weekTx = safeVal(responses?.[2]);
+        const weekRx = safeVal(responses?.[3]);
+        const monthTx = safeVal(responses?.[4]);
+        const monthRx = safeVal(responses?.[5]);
+        return [
+          { label: t('今日'), outbound: todayTx, inbound: todayRx, total: todayTx + todayRx },
+          { label: t('7天'), outbound: weekTx, inbound: weekRx, total: weekTx + weekRx },
+          { label: t('30天'), outbound: monthTx, inbound: monthRx, total: monthTx + monthRx },
+        ];
+      },
+    },
+    renderContent: ({ data }) => {
+      const rows = Array.isArray(data) ? data : [];
+      const headers = [t('出口'), t('入口'), t('总流量')];
+      return (
+        <div style={{ padding: '12px 16px' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr>
+                <th style={{ textAlign: 'left', fontWeight: 600, paddingBottom: 8 }}>{t('时间范围')}</th>
+                {headers.map((h) => (
+                  <th key={h} style={{ textAlign: 'right', fontWeight: 600, paddingBottom: 8 }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r) => (
+                <tr key={r.label}>
+                  <td style={{ padding: '6px 0' }}>{r.label}</td>
+                  <td style={{ textAlign: 'right' }}>{getSuitableValue(r.outbound, 'disk', 0)}</td>
+                  <td style={{ textAlign: 'right' }}>{getSuitableValue(r.inbound, 'disk', 0)}</td>
+                  <td style={{ textAlign: 'right' }}>{getSuitableValue(r.total, 'disk', 0)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      );
+    },
   },
 ];
 
