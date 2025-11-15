@@ -20,7 +20,9 @@ export function createFetchPrometheusClient(createParams, fetchPrometheusFunc) {
         finalFormatFunc,
         baseParams
       );
-      const finalUrl = convertUrl ? convertUrl(formattedUrl) : formattedUrl;
+      const finalUrl = convertUrl
+        ? convertUrl(formattedUrl, { interval, currentRange })
+        : formattedUrl;
       return fetchPrometheusFunc
         ? fetchPrometheusFunc(finalUrl, requestType, currentRange, interval)
         : fetchPrometheus(finalUrl, requestType, currentRange, interval);

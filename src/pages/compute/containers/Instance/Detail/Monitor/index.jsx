@@ -12,11 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import PropTypes from 'prop-types';
 import { get } from 'lodash';
-import { Alert, Select } from 'antd';
-import { Chart, Interval, Tooltip, Axis, Coordinate } from 'bizcharts';
+import { Alert } from 'antd';
 import { LoadingOutlined } from '@ant-design/icons';
 import BaseContent from 'components/PrometheusChart/component/BaseContent';
 import { getSuitableValue } from 'resources/prometheus/monitoring';
@@ -24,17 +23,41 @@ import {
   ChartType,
   fetchPrometheus,
 } from 'components/PrometheusChart/utils/utils';
-import metricDict from 'resources/prometheus/metricDict';
 
 import i18n from 'core/i18n';
+import client from 'client';
 
 import styles from './index.less';
 
 const { t } = i18n;
-const { Option } = Select;
+
+function getTodayDurationAlias() {
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const ms = now.getTime() - start.getTime();
+  const totalMinutes = Math.floor(ms / 60000);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  return `${hours}h${minutes}m`;
+}
+
+function getSinceCreateAlias(createdMs) {
+  if (!createdMs) return '30d';
+  const now = Date.now();
+  const diff = Math.max(0, now - createdMs);
+  const totalMinutes = Math.floor(diff / 60000);
+  const days = Math.floor(totalMinutes / (60 * 24));
+  const remMinutes = totalMinutes - days * 60 * 24;
+  const hours = Math.floor(remMinutes / 60);
+  const minutes = remMinutes % 60;
+  const d = days > 0 ? `${days}d` : '';
+  const h = hours > 0 ? `${hours}h` : '';
+  const m = `${minutes}m`;
+  return `${d}${h}${m}`;
+}
 
 // 定义顶部指标卡片配置，复用PhysicalNode组件的结构
-export const getTopCardList = (instanceId, domain) => [
+export const getTopCardList = (instanceId, domain, createdMs) => [
   {
     title: t('CPU Usage(%)'),
     span: 8,
@@ -46,7 +69,6 @@ export const getTopCardList = (instanceId, domain) => [
       },
     },
     handleDataParams: {
-      // 将CPU使用率乘以100以显示百分比
       formatDataFn: (responses) => {
         if (!responses || responses.length === 0) return [];
 
@@ -60,7 +82,7 @@ export const getTopCardList = (instanceId, domain) => [
         // 格式化数据（直接返回数据点数组，不包装在对象中）
         return cpuUsageResults.map((result) => ({
           x: result.value?.[0] || 0,
-          y: (parseFloat(result.value?.[1]) || 0) * 100,
+          y: parseFloat(result.value?.[1]) || 0,
         }));
       },
     },
@@ -127,51 +149,135 @@ export const getTopCardList = (instanceId, domain) => [
     ),
   },
   {
+    title: t('自创建总量'),
+    span: 12,
+    visibleHeight: 180,
+    createFetchParams: {
+      requestType: 'current',
+      metricKey: 'instanceMonitor.network_since_created',
+      params: {
+        domain,
+      },
+      convertUrl: (url) =>
+        url.replace('[SC]', `[${getSinceCreateAlias(createdMs)}]`),
+    },
+    handleDataParams: {
+      formatDataFn: (responses) => {
+        const safeVal = (res) => {
+          const results = get(res, 'data.result', []) || [];
+          const sum = results.reduce((acc, item) => {
+            const v = parseFloat(get(item, 'value[1]', 0));
+            return acc + (Number.isNaN(v) ? 0 : v);
+          }, 0);
+          return sum;
+        };
+        const scTx = safeVal(responses?.[0]);
+        const scRx = safeVal(responses?.[1]);
+        const total = scTx + scRx;
+        return [
+          {
+            x: 0,
+            y: total,
+          },
+        ];
+      },
+    },
+    renderContent: (value) => (
+      <div className={styles['top-content']}>
+        {getSuitableValue(get(value.data, '[0].y', 0), 'disk', 0)}
+      </div>
+    ),
+  },
+  {
     title: t('流量统计'),
     span: 12,
     visibleHeight: 180,
     createFetchParams: {
       // 使用 current 查询，固定三个周期（今日/7天/30天）统计
       requestType: 'current',
-      // 使用在 metricDict 中定义的网络汇总查询
-      metricKey: 'instanceMonitor.network_total',
+      metricKey: 'instanceMonitor.network_total_sc',
       params: {
         domain,
       },
+      convertUrl: (url) =>
+        url
+          .replace('[24h]', `[${getTodayDurationAlias()}]`)
+          .replace('[SC]', `[${getSinceCreateAlias(createdMs)}]`),
     },
     handleDataParams: {
-      // 直接取汇总字节数（increase 区间累积），渲染为固定表格
       formatDataFn: (responses) => {
         const safeVal = (res) => {
-          const v = get(res, 'data.result[0].value[1]');
-          const n = parseFloat(v);
-          return Number.isNaN(n) ? 0 : n;
+          const results = get(res, 'data.result', []) || [];
+          const sum = results.reduce((acc, item) => {
+            const v = parseFloat(get(item, 'value[1]', 0));
+            return acc + (Number.isNaN(v) ? 0 : v);
+          }, 0);
+          return sum;
         };
-        // 顺序：今日(Tx)、今日(Rx)、7天(Tx)、7天(Rx)、30天(Tx)、30天(Rx)
         const todayTx = safeVal(responses?.[0]);
         const todayRx = safeVal(responses?.[1]);
         const weekTx = safeVal(responses?.[2]);
         const weekRx = safeVal(responses?.[3]);
         const monthTx = safeVal(responses?.[4]);
         const monthRx = safeVal(responses?.[5]);
+        const scTx = safeVal(responses?.[6]);
+        const scRx = safeVal(responses?.[7]);
         return [
-          { label: t('今日'), outbound: todayTx, inbound: todayRx, total: todayTx + todayRx },
-          { label: t('7天'), outbound: weekTx, inbound: weekRx, total: weekTx + weekRx },
-          { label: t('30天'), outbound: monthTx, inbound: monthRx, total: monthTx + monthRx },
+          {
+            label: t('今日'),
+            outbound: todayTx,
+            inbound: todayRx,
+            total: todayTx + todayRx,
+          },
+          {
+            label: t('7天'),
+            outbound: weekTx,
+            inbound: weekRx,
+            total: weekTx + weekRx,
+          },
+          {
+            label: t('30天'),
+            outbound: monthTx,
+            inbound: monthRx,
+            total: monthTx + monthRx,
+          },
+          {
+            label: t('自创建'),
+            outbound: scTx,
+            inbound: scRx,
+            total: scTx + scRx,
+          },
         ];
       },
     },
     renderContent: ({ data }) => {
       const rows = Array.isArray(data) ? data : [];
-      const headers = [t('出口'), t('入口'), t('总流量')];
+      const headers = [t('出口流量'), t('入口流量'), t('总流量')];
       return (
         <div style={{ padding: '12px 16px' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr>
-                <th style={{ textAlign: 'left', fontWeight: 600, paddingBottom: 8 }}>{t('时间范围')}</th>
+                <th
+                  style={{
+                    textAlign: 'left',
+                    fontWeight: 600,
+                    paddingBottom: 8,
+                  }}
+                >
+                  {t('时间范围')}
+                </th>
                 {headers.map((h) => (
-                  <th key={h} style={{ textAlign: 'right', fontWeight: 600, paddingBottom: 8 }}>{h}</th>
+                  <th
+                    key={h}
+                    style={{
+                      textAlign: 'right',
+                      fontWeight: 600,
+                      paddingBottom: 8,
+                    }}
+                  >
+                    {h}
+                  </th>
                 ))}
               </tr>
             </thead>
@@ -179,9 +285,15 @@ export const getTopCardList = (instanceId, domain) => [
               {rows.map((r) => (
                 <tr key={r.label}>
                   <td style={{ padding: '6px 0' }}>{r.label}</td>
-                  <td style={{ textAlign: 'right' }}>{getSuitableValue(r.outbound, 'disk', 0)}</td>
-                  <td style={{ textAlign: 'right' }}>{getSuitableValue(r.inbound, 'disk', 0)}</td>
-                  <td style={{ textAlign: 'right' }}>{getSuitableValue(r.total, 'disk', 0)}</td>
+                  <td style={{ textAlign: 'right' }}>
+                    {getSuitableValue(r.outbound, 'disk', 0)}
+                  </td>
+                  <td style={{ textAlign: 'right' }}>
+                    {getSuitableValue(r.inbound, 'disk', 0)}
+                  </td>
+                  <td style={{ textAlign: 'right' }}>
+                    {getSuitableValue(r.total, 'disk', 0)}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -203,49 +315,7 @@ export const getChartCardList = (instanceId, domain) => [
         domain,
       },
     },
-    handleDataParams: {
-      // 将CPU使用率乘以100以显示百分比，并与默认的handleResponses保持一致的格式
-      formatDataFn: (responses) => {
-        const ret = [];
-
-        if (!responses || responses.length === 0) {
-          // 添加默认模拟数据以便查看图表效果
-          const now = Date.now() / 1000;
-          for (let i = 60; i >= 0; i--) {
-            ret.push({
-              x: now - i * 60,
-              y: parseFloat((30 + Math.random() * 40).toFixed(2)),
-            });
-          }
-          return ret;
-        }
-
-        responses.forEach((response) => {
-          const { data } = response;
-          if (!data || !data.result) return;
-
-          data.result.forEach((result) => {
-            // 兼容range和current两种类型的数据格式
-            const values =
-              result.values ||
-              (result.value && Array.isArray(result.value[0])
-                ? result.value
-                : [result.value]);
-
-            values.forEach((value) => {
-              if (!value || value.length < 2) return;
-
-              ret.push({
-                x: parseFloat(value[0]),
-                y: parseFloat((parseFloat(value[1]) * 100).toFixed(2)), // 乘以100并保留2位小数
-              });
-            });
-          });
-        });
-
-        return ret;
-      },
-    },
+    handleDataParams: {},
     chartProps: {
       height: 300,
       scale: {
@@ -292,6 +362,16 @@ export const getChartCardList = (instanceId, domain) => [
         // 使用domain作为过滤参数，与内存监控保持一致
         domain,
       },
+      convertUrl: (url, { interval }) => {
+        const base = Math.max((interval || 10) * 2, 180);
+        const minutes = Math.floor(base / 60);
+        const seconds = base % 60;
+        const alias =
+          minutes > 0
+            ? `${minutes}m${seconds ? `${seconds}s` : ''}`
+            : `${seconds}s`;
+        return url.replace('[3m]', `[${alias}]`);
+      },
     },
     handleDataParams: {
       modifyKeys: [t('receive'), t('transmit')],
@@ -317,6 +397,16 @@ export const getChartCardList = (instanceId, domain) => [
         // 使用domain作为过滤参数，与内存监控保持一致
         domain,
       },
+      convertUrl: (url, { interval }) => {
+        const base = Math.max((interval || 10) * 2, 180);
+        const minutes = Math.floor(base / 60);
+        const seconds = base % 60;
+        const alias =
+          minutes > 0
+            ? `${minutes}m${seconds ? `${seconds}s` : ''}`
+            : `${seconds}s`;
+        return url.replace('[3m]', `[${alias}]`);
+      },
     },
     handleDataParams: {
       modifyKeys: [t('read'), t('write')],
@@ -338,92 +428,27 @@ export const getChartCardList = (instanceId, domain) => [
 
 // 创建监控图表配置，同时使用instanceId和domain名称
 // domain是从libvirt_domain_openstack_info查询获取的domain名称
-export const getChartConfig = (instanceId, domain) => ({
+export const getChartConfig = (instanceId, domain, createdMs) => ({
   chartCardList: getChartCardList(instanceId, domain),
-  topCardList: getTopCardList(instanceId, domain),
+  topCardList: getTopCardList(instanceId, domain, createdMs),
 });
 
 // 实例监控基础组件，包含图表展示
-const InstanceMonitorBase = ({ instanceId, hostname: domain }) => {
-  const [devices, setDevices] = useState([]);
-  const [selectedDevice, setSelectedDevice] = useState('all');
-  const [isLoadingDevices, setIsLoadingDevices] = useState(false);
-
-  // 获取设备列表
-  useEffect(() => {
-    if (domain) {
-      fetchDevices();
-    }
-  }, [domain]);
-
-  // 从Prometheus获取设备列表
-  const fetchDevices = async () => {
-    setIsLoadingDevices(true);
-    try {
-      const query = `libvirt_domain_block_stats_read_bytes_total{domain="${domain}"}`;
-      const result = await fetchPrometheus(query, 'current');
-
-      if (result && result.data && result.data.result) {
-        const deviceList = Array.from(
-          new Set(result.data.result.map((item) => item.metric.device))
-        ).filter(Boolean);
-        setDevices(deviceList);
-      }
-    } catch (error) {
-      console.error('Failed to fetch devices:', error);
-    } finally {
-      setIsLoadingDevices(false);
-    }
-  };
-
-  // 处理设备选择变更
-  const handleDeviceChange = (value) => {
-    setSelectedDevice(value);
-  };
-
-  // 创建默认节点对象，设置domain参数和device参数
+const InstanceMonitorBase = ({ instanceId, hostname: domain, createdMs }) => {
+  // 创建默认节点对象，仅设置 domain 参数
   const defaultNode = {
     metric: {
       domain,
-      ...(selectedDevice !== 'all' && { device: selectedDevice }),
     },
   };
 
   return (
     <>
-      {devices.length > 0 && (
-        <div
-          style={{
-            marginBottom: 16,
-            padding: '16px',
-            backgroundColor: '#f5f5f5',
-            borderRadius: 4,
-          }}
-        >
-          <label htmlFor="disk-device-select" style={{ marginRight: 8 }}>
-            {t('Select Disk Device')}:
-          </label>
-          <Select
-            id="disk-device-select"
-            value={selectedDevice}
-            onChange={handleDeviceChange}
-            style={{ width: 200 }}
-            loading={isLoadingDevices}
-          >
-            <Option value="all">{t('All Devices')}</Option>
-            {devices.map((device) => (
-              <Option key={device} value={device}>
-                {device}
-              </Option>
-            ))}
-          </Select>
-        </div>
-      )}
       <BaseContent
-        chartConfig={getChartConfig(instanceId, domain)}
+        chartConfig={getChartConfig(instanceId, domain, createdMs)}
         renderNodeSelect={false}
         renderTimeRangeSelect
-        defaultNode={defaultNode} // 设置默认节点，确保domain参数正确传递给Charts组件
+        defaultNode={defaultNode}
       />
     </>
   );
@@ -443,6 +468,7 @@ class InstanceMonitorWrapper extends React.Component {
       error: '',
       domain: '',
       hasPrometheus: true,
+      createdMs: 0,
     };
   }
 
@@ -476,17 +502,11 @@ class InstanceMonitorWrapper extends React.Component {
     return instanceId || (match && match.params && match.params.id) || '';
   }
 
-  // 检查Prometheus服务是否可用
-  checkPrometheusService = async () => {
-    const instanceId = this.getInstanceId();
-    // 在第一次调用时，我们可能还没有domain信息，所以先使用instanceId
+  // 基于 domain 的指标检查 Prometheus 服务可用性
+  checkPrometheusService = async (domain) => {
     try {
-      // 尝试直接使用instanceId检查Prometheus服务
-      await fetchPrometheus(
-        get(metricDict, 'instanceMonitor.cpu.url[0]'),
-        'current',
-        { instance: instanceId }
-      );
+      const query = `libvirt_domain_interface_stats_receive_bytes_total{domain="${domain}"}`;
+      await fetchPrometheus(query, 'current');
       return true;
     } catch (err) {
       this.setState({
@@ -498,44 +518,36 @@ class InstanceMonitorWrapper extends React.Component {
     }
   };
 
-  // 通过libvirt_domain_openstack_info获取OpenStack实例信息，包括domain
-  getInstanceNameByPrometheus = async (instanceId) => {
+  fetchDomainAndCreatedFromExtension = async (instanceId) => {
     try {
-      // 从metricDict中获取libvirt_domain_openstack_info指标
-      const openstackInfoUrl = get(
-        metricDict,
-        'instanceMonitor.openstackinfo.url[0]',
-        'libvirt_domain_openstack_info'
-      );
-
-      // 移除metric_name和标签选择器之间的空格，确保查询格式正确
-      const query = `${openstackInfoUrl}{instance_id="${instanceId}"}`;
-
-      const ret = await fetchPrometheus(query, 'current');
-      const {
-        data: { result = [] },
-      } = ret;
-      if (result.length > 0) {
-        // 获取domain信息
-        const domain = result[0].metric.domain || instanceId;
-
-        // 保存domain信息
-        this.setState({ domain });
-        return {
-          domain,
-        };
+      const ret = await client.skyline.extension.servers({
+        uuid: instanceId,
+        all_projects: true,
+      });
+      const servers = (ret && ret.servers) || [];
+      if (servers.length > 0) {
+        const s = servers[0] || {};
+        const ori = s.origin_data || {};
+        const domain =
+          ori['OS-EXT-SRV-ATTR:instance_name'] ||
+          s.hostname ||
+          s.name ||
+          instanceId;
+        const createdStr = ori.created || s.created_at || '';
+        let createdMs = 0;
+        if (createdStr) {
+          const d = new Date(createdStr);
+          if (!Number.isNaN(d.getTime())) {
+            createdMs = d.getTime();
+          }
+        }
+        this.setState({ domain, createdMs });
+        return { domain, createdMs };
       }
-    } catch (error) {
-      // 记录错误但继续执行，使用实例ID作为备选
-      this.setState((prevState) => ({
-        error: prevState.error || 'Failed to get domain from metrics',
-      }));
+    } catch (e) {
+      return {};
     }
-    // 如果获取失败，返回实例ID作为默认值
-    this.setState({ domain: instanceId });
-    return {
-      domain: instanceId,
-    };
+    return {};
   };
 
   // 初始化监控组件
@@ -552,23 +564,89 @@ class InstanceMonitorWrapper extends React.Component {
       return;
     }
 
-    // 检查Prometheus服务
-    const prometheusAvailable = await this.checkPrometheusService();
-    this.setState({ hasPrometheus: prometheusAvailable });
+    // 移除首次按 instance 的可用性检查，降低请求开销
 
-    if (!prometheusAvailable) {
-      this.setState({ isLoading: false });
-      return;
+    const { instanceDetail } = this.props;
+    if (instanceDetail && instanceDetail.created) {
+      const d = new Date(instanceDetail.created);
+      if (!Number.isNaN(d.getTime())) {
+        const createdTime = d.getTime();
+        this.setState((prev) =>
+          !prev.createdMs ? { createdMs: createdTime } : null
+        );
+      }
     }
 
-    // 通过libvirt_domain_openstack_info获取实例名称和domain信息
-    await this.getInstanceNameByPrometheus(instanceId);
+    const extRet = await this.fetchDomainAndCreatedFromExtension(instanceId);
+    if (!extRet.domain) {
+      this.setState({ domain: instanceId });
+    }
+
+    // 基于 domain 的 Prometheus 可用性检查
+    if (this.state.domain) {
+      const prometheusAvailable = await this.checkPrometheusService(
+        this.state.domain
+      );
+      this.setState(() => ({ hasPrometheus: prometheusAvailable }));
+      if (!prometheusAvailable) {
+        this.setState(() => ({ isLoading: false }));
+        return;
+      }
+    }
+
+    // 若仍无创建时间，兜底为网络指标的最早样本时间
+    if (this.state.domain) {
+      const ts = await this.getEarliestNetworkTimestamp(this.state.domain);
+      if (ts)
+        this.setState((prev) => (!prev.createdMs ? { createdMs: ts } : null));
+    }
 
     this.setState({ isLoading: false });
   };
 
+  // 兜底：获取网络指标的最早样本时间（近似创建时间，受保留期影响）
+  getEarliestNetworkTimestamp = async (domain) => {
+    try {
+      const start = new Date(Date.now() - 30 * 24 * 3600 * 1000);
+      const end = new Date();
+      const step = 3600;
+      const tx = await fetchPrometheus(
+        `libvirt_domain_interface_stats_transmit_bytes_total{domain="${domain}"}`,
+        'range',
+        [start, end],
+        step
+      );
+      const rx = await fetchPrometheus(
+        `libvirt_domain_interface_stats_receive_bytes_total{domain="${domain}"}`,
+        'range',
+        [start, end],
+        step
+      );
+      const getFirstTs = (ret) => {
+        const results = (ret && ret.data && ret.data.result) || [];
+        let ts = 0;
+        results.forEach((r) => {
+          const values = r.values || [];
+          if (values.length > 0) {
+            const first = parseFloat(values[0][0]);
+            if (!Number.isNaN(first)) {
+              ts = ts === 0 ? first : Math.min(ts, first);
+            }
+          }
+        });
+        return ts;
+      };
+      const ts = Math.min(
+        ...[getFirstTs(tx), getFirstTs(rx)].filter((v) => v > 0)
+      );
+      return ts > 0 ? ts * 1000 : 0;
+    } catch (e) {
+      return 0;
+    }
+  };
+
   render() {
-    const { isLoading, error, domain, hasPrometheus } = this.state;
+    const { isLoading, error, domain, hasPrometheus, createdMs } = this.state;
     // instanceId已经在initMonitor中使用，这里不再需要单独声明
 
     // 显示加载状态
@@ -601,8 +679,9 @@ class InstanceMonitorWrapper extends React.Component {
       <div className={styles.container}>
         {hasPrometheus && (
           <InstanceMonitorBase
-            instanceId={instanceId} // 使用原始的instanceId确保正确的指标查询
-            hostname={domain} // 传递真实的domain名称作为过滤条件，而不是instanceName
+            instanceId={instanceId}
+            hostname={domain}
+            createdMs={createdMs}
           />
         )}
       </div>

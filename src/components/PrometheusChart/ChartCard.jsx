@@ -63,14 +63,20 @@ const ChartCard = (props) => {
     }
 
     return (
-      <Chart autoFit padding="auto" data={data} height={height} scale={nextScale}>
+      <Chart
+        autoFit
+        padding="auto"
+        data={data}
+        height={height}
+        scale={nextScale}
+      >
         <Line {...lineProps} />
         <Tooltip {...toolTipProps} />
       </Chart>
     );
   };
 
-  const extra = () => {
+  const extra = (...args) => {
     const {
       title,
       createFetchParams,
@@ -94,7 +100,7 @@ const ChartCard = (props) => {
 
     return (
       <>
-        {props.extra && props.extra()}
+        {props.extra && props.extra(...args)}
         {!isModal && (
           <Button
             type="text"

@@ -174,8 +174,8 @@ const metricDict = {
         'node_network_transmit_bytes_total',
       ],
       finalFormatFunc: [
-        (url) => `sum(irate(${url}[10m]))`,
-        (url) => `sum(irate(${url}[10m]))`,
+        (url) => `irate(${url}[3m])`,
+        (url) => `irate(${url}[3m])`,
       ],
     },
     tcpConnections: {
@@ -489,16 +489,13 @@ const metricDict = {
     },
   },
   instanceMonitor: {
-    openstackinfo: {
-      url: ['libvirt_domain_openstack_info'],
-    },
     cpu: {
       url: ['libvirt_domain_info_cpu_time_seconds_total'],
       finalFormatFunc: [
         (url) => {
           const tagMatch = url.match(/\{([^}]*)\}/);
           const tags = tagMatch ? tagMatch[1] : '';
-          return `rate(libvirt_domain_info_cpu_time_seconds_total{${tags}}[3m])/libvirt_domain_info_virtual_cpus{${tags}}`;
+          return `rate(libvirt_domain_info_cpu_time_seconds_total{${tags}}[3m])/libvirt_domain_info_virtual_cpus{${tags}} * 100`;
         },
       ],
     },
@@ -541,11 +538,11 @@ const metricDict = {
         },
       ],
     },
-    // 新增：出入口流量汇总（按域名过滤后聚合所有网卡）
-    network_total: {
-      // 固定周期汇总（今日/7天/30天 × 出口/入口），用于顶部“流量统计”固定表格
-      // 顺序：今日(Tx)、今日(Rx)、7天(Tx)、7天(Rx)、30天(Tx)、30天(Rx)
+
+    network_total_sc: {
       url: [
+        'libvirt_domain_interface_stats_transmit_bytes_total',
+        'libvirt_domain_interface_stats_receive_bytes_total',
         'libvirt_domain_interface_stats_transmit_bytes_total',
         'libvirt_domain_interface_stats_receive_bytes_total',
         'libvirt_domain_interface_stats_transmit_bytes_total',
@@ -584,10 +581,37 @@ const metricDict = {
           const tags = tagMatch ? tagMatch[1] : '';
           return `sum(increase(libvirt_domain_interface_stats_receive_bytes_total{${tags}}[30d]))`;
         },
+        (url) => {
+          const tagMatch = url.match(/\{([^}]*)\}/);
+          const tags = tagMatch ? tagMatch[1] : '';
+          return `sum(increase(libvirt_domain_interface_stats_transmit_bytes_total{${tags}}[SC]))`;
+        },
+        (url) => {
+          const tagMatch = url.match(/\{([^}]*)\}/);
+          const tags = tagMatch ? tagMatch[1] : '';
+          return `sum(increase(libvirt_domain_interface_stats_receive_bytes_total{${tags}}[SC]))`;
+        },
+      ],
+    },
+    network_since_created: {
+      url: [
+        'libvirt_domain_interface_stats_transmit_bytes_total',
+        'libvirt_domain_interface_stats_receive_bytes_total',
+      ],
+      finalFormatFunc: [
+        (url) => {
+          const tagMatch = url.match(/\{([^}]*)\}/);
+          const tags = tagMatch ? tagMatch[1] : '';
+          return `sum(increase(libvirt_domain_interface_stats_transmit_bytes_total{${tags}}[SC]))`;
+        },
+        (url) => {
+          const tagMatch = url.match(/\{([^}]*)\}/);
+          const tags = tagMatch ? tagMatch[1] : '';
+          return `sum(increase(libvirt_domain_interface_stats_receive_bytes_total{${tags}}[SC]))`;
+        },
       ],
     },
 
-    
     disk: {
       url: [
         'libvirt_domain_block_stats_read_bytes_total',

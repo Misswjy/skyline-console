@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Button, Spin } from 'antd';
 import { SyncOutlined } from '@ant-design/icons';
 
@@ -51,11 +51,26 @@ const BaseContent = (props) => {
 
   const [isFetchingNodes, setIsFetchingNodes] = useState(true);
 
+  const mountedRef = useRef(true);
+  const timerRef = useRef(null);
+
+  useEffect(
+    () => () => {
+      mountedRef.current = false;
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+    },
+    []
+  );
+
   const handleRefresh = async (refresh = false) => {
     setIsLoading(true);
     if (renderNodeSelect) {
       setIsFetchingNodes(true);
       const ret = await fetchNodesFunc();
+      if (!mountedRef.current) return;
       setNodes(ret);
       if (!node || refresh) {
         setNode(ret[0]);
@@ -64,10 +79,15 @@ const BaseContent = (props) => {
       if (refresh && groupIndex !== 4) {
         setRange(getRange(groupIndex));
       }
+      if (!mountedRef.current) return;
       setIsFetchingNodes(false);
       setIsLoading(false);
     } else {
-      setTimeout(() => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+      }
+      timerRef.current = setTimeout(() => {
+        if (!mountedRef.current) return;
         setIsLoading(false);
       }, 300);
     }
@@ -89,7 +109,11 @@ const BaseContent = (props) => {
 
   useEffect(() => {
     setIsLoading(true);
-    setTimeout(() => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+    }
+    timerRef.current = setTimeout(() => {
+      if (!mountedRef.current) return;
       setIsLoading(false);
     }, 300);
   }, [node]);
