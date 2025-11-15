@@ -57,7 +57,7 @@ function getSinceCreateAlias(createdMs) {
 }
 
 // 定义顶部指标卡片配置，复用PhysicalNode组件的结构
-export const getTopCardList = (instanceId, domain, createdMs) => [
+export const getTopCardList = (domain, createdMs) => [
   {
     title: t('CPU Usage(%)'),
     span: 8,
@@ -97,11 +97,7 @@ export const getTopCardList = (instanceId, domain, createdMs) => [
     span: 8,
     createFetchParams: {
       metricKey: 'instanceMonitor.memUsage',
-      params: {
-        // 使用从libvirt_domain_openstack_info获取的domain名称作为过滤条件
-        // 而不是instanceId，以符合内存指标查询的逻辑
-        domain,
-      },
+      params: { domain },
     },
     renderContent: (value) => (
       <div className={styles['top-content']}>
@@ -114,10 +110,7 @@ export const getTopCardList = (instanceId, domain, createdMs) => [
     span: 8,
     createFetchParams: {
       metricKey: 'instanceMonitor.disk_iops',
-      params: {
-        // 使用domain作为过滤参数，与其他监控保持一致
-        domain,
-      },
+      params: { domain },
     },
     handleDataParams: {
       // 直接使用metricDict中计算好的总IOPS数据
@@ -305,15 +298,12 @@ export const getTopCardList = (instanceId, domain, createdMs) => [
 ];
 
 // 定义图表卡片配置，复用PhysicalNode组件的结构
-export const getChartCardList = (instanceId, domain) => [
+export const getChartCardList = (domain) => [
   {
     title: t('CPU Usage(%)'),
     createFetchParams: {
       metricKey: 'instanceMonitor.cpu',
-      params: {
-        // 使用domain作为过滤参数，与内存监控保持一致
-        domain,
-      },
+      params: { domain },
     },
     handleDataParams: {},
     chartProps: {
@@ -332,11 +322,7 @@ export const getChartCardList = (instanceId, domain) => [
     title: t('Memory Usage'),
     createFetchParams: {
       metricKey: 'instanceMonitor.memory',
-      params: {
-        // 使用从libvirt_domain_openstack_info获取的domain名称作为过滤条件
-        // 而不是instanceId，以符合内存指标查询的逻辑
-        domain,
-      },
+      params: { domain },
     },
     handleDataParams: {
       modifyKeys: [t('Used'), t('Free')],
@@ -358,10 +344,7 @@ export const getChartCardList = (instanceId, domain) => [
     title: t('Network Traffic'),
     createFetchParams: {
       metricKey: 'instanceMonitor.network',
-      params: {
-        // 使用domain作为过滤参数，与内存监控保持一致
-        domain,
-      },
+      params: { domain },
       convertUrl: (url, { interval }) => {
         const base = Math.max((interval || 10) * 2, 180);
         const minutes = Math.floor(base / 60);
@@ -427,25 +410,21 @@ export const getChartCardList = (instanceId, domain) => [
 ];
 
 // 创建监控图表配置，同时使用instanceId和domain名称
-// domain是从libvirt_domain_openstack_info查询获取的domain名称
-export const getChartConfig = (instanceId, domain, createdMs) => ({
-  chartCardList: getChartCardList(instanceId, domain),
-  topCardList: getTopCardList(instanceId, domain, createdMs),
+
+export const getChartConfig = (domain, createdMs) => ({
+  chartCardList: getChartCardList(domain),
+  topCardList: getTopCardList(domain, createdMs),
 });
 
 // 实例监控基础组件，包含图表展示
-const InstanceMonitorBase = ({ instanceId, hostname: domain, createdMs }) => {
-  // 创建默认节点对象，仅设置 domain 参数
+const InstanceMonitorBase = ({ hostname: domain, createdMs }) => {
   const defaultNode = {
-    metric: {
-      domain,
-    },
+    metric: { domain },
   };
-
   return (
     <>
       <BaseContent
-        chartConfig={getChartConfig(instanceId, domain, createdMs)}
+        chartConfig={getChartConfig(domain, createdMs)}
         renderNodeSelect={false}
         renderTimeRangeSelect
         defaultNode={defaultNode}
@@ -455,9 +434,7 @@ const InstanceMonitorBase = ({ instanceId, hostname: domain, createdMs }) => {
 };
 
 // 添加props验证
-InstanceMonitorBase.propTypes = {
-  instanceId: PropTypes.string.isRequired,
-};
+InstanceMonitorBase.propTypes = {};
 
 // 实例监控包装组件，处理Prometheus服务检查和错误处理
 class InstanceMonitorWrapper extends React.Component {
@@ -672,17 +649,10 @@ class InstanceMonitorWrapper extends React.Component {
       );
     }
 
-    // 获取原始的instanceId，而不是domain
-    const instanceId = this.getInstanceId();
-
     return (
       <div className={styles.container}>
         {hasPrometheus && (
-          <InstanceMonitorBase
-            instanceId={instanceId}
-            hostname={domain}
-            createdMs={createdMs}
-          />
+          <InstanceMonitorBase hostname={domain} createdMs={createdMs} />
         )}
       </div>
     );
