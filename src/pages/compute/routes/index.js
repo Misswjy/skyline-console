@@ -36,6 +36,7 @@ import HostAggregate from '../containers/HostAggregate';
 import BareMetalNode from '../containers/BareMetalNode';
 import BareMetalNodeDetail from '../containers/BareMetalNode/Detail';
 import CreateNode from '../containers/BareMetalNode/actions/Create';
+import RecycleBin from '../containers/RecycleBin';
 
 const PATH = '/compute';
 export default [
@@ -45,6 +46,7 @@ export default [
     routes: [
       { path: `${PATH}/instance`, component: Instance, exact: true },
       { path: `${PATH}/instance-admin`, component: Instance, exact: true },
+      { path: `${PATH}/recycle-bin-admin`, component: RecycleBin, exact: true },
       {
         path: `${PATH}/instance/detail/:id`,
         component: InstanceDetail,

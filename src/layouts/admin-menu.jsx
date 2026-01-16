@@ -63,6 +63,13 @@ const renderMenu = (t) => {
           ],
         },
         {
+          path: '/compute/recycle-bin-admin',
+          name: t('Recycle Bin'),
+          key: 'recycleBinAdmin',
+          level: 1,
+          children: [],
+        },
+        {
           path: '/compute/instance-snapshot-admin',
           name: t('Instance Snapshots'),
           key: 'instanceSnapshotAdmin',
