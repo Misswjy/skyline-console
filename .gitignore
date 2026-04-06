@@ -37,3 +37,6 @@ venv/
 ENV/
 build/
 .tox
+.agents/
+.trae/
+
